@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"habit-tracker/internal/habit"
 	"log"
+	"net/http"
 
 	_ "github.com/lib/pq"
 )
@@ -23,36 +25,21 @@ func main() {
 	}
 	fmt.Println("Connected to DB!")
 
-	// Пример INSERT
-	var id int
-	err = db.QueryRow(
-		`INSERT INTO habits (name, description) VALUES ($1, $2) RETURNING id`,
-		"Пить воду",
-		"1.5 литра в день",
-	).Scan(&id)
-	if err != nil {
-		log.Fatal("INSERT error:", err)
-	}
-	fmt.Println("Inserted habit with id:", id)
+	habitRepo := habit.NewHabitRepository(db)
+	habitLogRepo := habit.NewHabitLogRepository(db)
 
-	// Пример SELECT
-	rows, err := db.Query(`SELECT id, name, description FROM habits`)
-	if err != nil {
-		log.Fatal("SELECT error:", err)
-	}
-	defer rows.Close()
+	svc := habit.NewHabitService(habitRepo, habitLogRepo)
 
-	for rows.Next() {
-		var hID int
-		var name, desc sql.NullString
-		if err := rows.Scan(&hID, &name, &desc); err != nil {
-			log.Fatal("SCAN error:", err)
-		}
-		fmt.Printf("Habit: id=%d, name=%s, description=%s\n",
-			hID, name.String, desc.String)
+	mux := http.NewServeMux()
+	mux.Handle("/habits", habit.NewHabitHandler(svc))
+
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
 	}
 
-	if err := rows.Err(); err != nil {
-		log.Fatal("rows.Err error:", err)
+	log.Println("Starting server on :8080")
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatal(err)
 	}
 }

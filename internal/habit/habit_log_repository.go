@@ -9,9 +9,9 @@ type habitLogRepository struct {
 	db *sql.DB
 }
 
-//func NewHabitLogRepository(db *sql.DB) HabitLogRepository {
-//	return &habitLogRepository{db: db}
-//}
+func NewHabitLogRepository(db *sql.DB) HabitLogRepository {
+	return &habitLogRepository{db: db}
+}
 
 func (r *habitLogRepository) CreateHabitLog(log *HabitLog) error {
 	_, err := r.db.Exec(
